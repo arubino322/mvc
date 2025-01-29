@@ -37,7 +37,6 @@ gcloud compute firewall-rules create default-allow-http \
 ```
 
 4. Copy files to GCS.
-Note: this is copying to machine-learning-workspace project b/c of quota-project issue, but let's keep going for now.
 
 ```bash
 gsutil mb gs://${USER}
