@@ -1,5 +1,6 @@
 .venv/
 data/
+preprocess_train_evaluate.json
 
 # Python
 src/__pycache__/
