@@ -3,5 +3,6 @@ data/
 preprocess_train_evaluate.json
 
 # Python
-src/__pycache__/
+__pycache__
 .streamlit/
+.ipynb_checkpoints
