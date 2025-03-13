@@ -8,6 +8,8 @@ import plotly.graph_objects as go
 import streamlit as st
 from google.cloud import bigquery
 
+GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
+DATASET = os.getenv("BASE_PATH").replace("-", "_")
 
 # Initialize connection to BigQuery
 def init_bigquery():
@@ -20,12 +22,12 @@ def get_most_recent_day(client, end_date):
     end = end_date.strftime('%Y-%m-%d')
     query = f"""
         select crashes, round(yhat) as yhat, round(crashes - yhat) as delta
-        from `nyc-transit-426211.motor_vehicle_crashes.predictions` p
+        from `{GOOGLE_CLOUD_PROJECT}.{DATASET}.predictions` p
         left join (
             select
             crash_date,
             count(distinct collision_id) as crashes,
-            from `nyc-transit-426211.motor_vehicle_crashes.crashes`
+            from `{GOOGLE_CLOUD_PROJECT}.{DATASET}.crashes`
             where crash_date = '{end}'
             group by 1
         ) c
@@ -51,13 +53,13 @@ def get_collision_ts(client, start_date, end_date):
             select crash_date,
             count(*) as people_involved,
             count(distinct collision_id) as crashes
-            from `nyc-transit-426211.motor_vehicle_crashes.person`
+            from `{GOOGLE_CLOUD_PROJECT}.{DATASET}.person`
             where crash_date BETWEEN '{start}' AND '{end}'
             group by 1
         ) p1
         left join (
             select *
-            from `nyc-transit-426211.motor_vehicle_crashes.predictions`
+            from `{GOOGLE_CLOUD_PROJECT}.{DATASET}.predictions`
         ) p2
         on p1.crash_date=p2.ds
         order by 1 asc;
@@ -83,14 +85,14 @@ def get_collision_data(client, end_date):
             select collision_id, crash_time, latitude, longitude,
                 number_of_persons_injured,
                 number_of_persons_killed,
-            from `nyc-transit-426211.motor_vehicle_crashes.crashes`
+            from `{GOOGLE_CLOUD_PROJECT}.{DATASET}.crashes`
             where crash_date = '{end}'
             and latitude is not null
             and latitude != 0
         ) c
         left join (
             select collision_id, count(*) as people_involved
-            from `nyc-transit-426211.motor_vehicle_crashes.person`
+            from `{GOOGLE_CLOUD_PROJECT}.{DATASET}.person`
             where crash_date = '{end}'
             group by 1
         ) p
@@ -101,7 +103,6 @@ def get_collision_data(client, end_date):
 
 
 def main():
-
     # Initialize BigQuery Client
     client = init_bigquery()
 
@@ -118,16 +119,16 @@ def main():
     if start_date > end_date:
         st.error("Error: End date must fall after start date.")
     else:
-        # get most recent data available
+        ##### MOST RECENT DAY DATA #####
         last_day = get_most_recent_day(client, end_date)
         
-        # numbers at the top
+        # tiles at the top
         col1, col2, col3 = st.columns(3)
         col1.metric("Actual", int(last_day['crashes'][0]), border=True)
         col2.metric("Predicted", int(last_day['yhat'][0]), border=True)
         col3.metric("Delta %", f"{last_day['delta'][0]}%", border=True)
         
-        # Get filtered data from BigQuery
+        ###### TIME SERIES #####
         df = get_collision_ts(client, start_date, end_date)
 
         # Create the figure using Plotly graph_objects
@@ -186,7 +187,7 @@ def main():
         # Display the plot
         st.plotly_chart(fig, use_container_width=True)
         
-        # map
+        ##### MAP #####
         map_df = get_collision_data(client, end_date)
 
         # plotly map
