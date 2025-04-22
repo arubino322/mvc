@@ -9,11 +9,14 @@ import streamlit as st
 from google.cloud import bigquery
 
 GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
-DATASET = os.getenv("BASE_PATH").replace("-", "_")
+DATASET = os.getenv("BASE_PATH")
+CREDENTIAL_PATH = os.environ.get("CREDENTIAL_PATH")
 
 # Initialize connection to BigQuery
 def init_bigquery():
-    CREDENTIAL_PATH = os.environ.get("CREDENTIAL_PATH")
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise ValueError("GOOGLE_CLOUD_PROJECT is not set!")
     client = bigquery.Client()
     return client
 
@@ -110,7 +113,7 @@ def main():
     st.sidebar.header("Filter by Date Range")
     start_date = st.sidebar.date_input("Start Date", "2025-01-01")
     # have data only up until 60 days ago
-    end_date = st.sidebar.date_input("End Date", datetime.today() - timedelta(days=60))
+    end_date = st.sidebar.date_input("End Date", datetime.today() - timedelta(days=61))
     
     st.title("NYC Pedestrian Collisions")
     st.subheader(f"Showing most recent data as of {end_date}")
