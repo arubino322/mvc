@@ -7,21 +7,20 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from google.cloud import bigquery
+from google.oauth2 import service_account
 
 GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
 DATASET = os.getenv("BASE_PATH")
-CREDENTIAL_PATH = os.environ.get("CREDENTIAL_PATH")
 
-# Initialize connection to BigQuery
-def init_bigquery():
-    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not project_id:
-        raise ValueError("GOOGLE_CLOUD_PROJECT is not set!")
-    client = bigquery.Client()
-    return client
+# Create API client.
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+client = bigquery.Client(credentials=credentials)
 
 # Query collisions data by borough
-def get_most_recent_day(client, end_date):
+@st.cache_data(ttl=600)
+def get_most_recent_day(end_date):
     end = end_date.strftime('%Y-%m-%d')
     query = f"""
         select crashes, round(yhat) as yhat, round(crashes - yhat) as delta
@@ -40,8 +39,8 @@ def get_most_recent_day(client, end_date):
     query_job = client.query(query)
     return query_job.to_dataframe()
 
-
-def get_collision_ts(client, start_date, end_date):
+@st.cache_data(ttl=600)
+def get_collision_ts( start_date, end_date):
     start = start_date.strftime('%Y-%m-%d')
     end = end_date.strftime('%Y-%m-%d')
     query = f"""
@@ -70,7 +69,8 @@ def get_collision_ts(client, start_date, end_date):
     query_job = client.query(query)
     return query_job.to_dataframe()
 
-def get_collision_data(client, end_date):
+@st.cache_data(ttl=600)
+def get_collision_data(end_date):
     # start = start_date.strftime('%Y-%m-%d')
     end = end_date.strftime('%Y-%m-%d')
     query = f"""
@@ -106,9 +106,6 @@ def get_collision_data(client, end_date):
 
 
 def main():
-    # Initialize BigQuery Client
-    client = init_bigquery()
-
     # Date filter widgets
     st.sidebar.header("Filter by Date Range")
     start_date = st.sidebar.date_input("Start Date", "2025-01-01")
@@ -123,7 +120,7 @@ def main():
         st.error("Error: End date must fall after start date.")
     else:
         ##### MOST RECENT DAY DATA #####
-        last_day = get_most_recent_day(client, end_date)
+        last_day = get_most_recent_day(end_date)
         
         # tiles at the top
         col1, col2, col3 = st.columns(3)
@@ -132,7 +129,7 @@ def main():
         col3.metric("Delta %", f"{last_day['delta'][0]}%", border=True)
         
         ###### TIME SERIES #####
-        df = get_collision_ts(client, start_date, end_date)
+        df = get_collision_ts(start_date, end_date)
 
         # Create the figure using Plotly graph_objects
         fig = go.Figure()
@@ -191,7 +188,7 @@ def main():
         st.plotly_chart(fig, use_container_width=True)
         
         ##### MAP #####
-        map_df = get_collision_data(client, end_date)
+        map_df = get_collision_data(end_date)
 
         # plotly map
         fig3 = px.scatter_map(
