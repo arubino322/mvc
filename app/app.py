@@ -113,7 +113,7 @@ def main():
     end_date = st.sidebar.date_input("End Date", datetime.today() - timedelta(days=61))
     
     st.title("NYC Pedestrian Collisions")
-    st.subheader(f"Showing most recent data as of {end_date}")
+    st.subheader(f"Most recent data as of {end_date}")
 
     # Ensure start_date is before end_date
     if start_date > end_date:
