@@ -112,7 +112,7 @@ def main():
     # have data only up until 60 days ago
     end_date = st.sidebar.date_input("End Date", datetime.today() - timedelta(days=61))
     
-    st.title("NYC Pedestrian Collisions")
+    st.title("NYC Motor Vehicle Collisions")
     st.subheader(f"Most recent data as of {end_date}")
 
     # Ensure start_date is before end_date
@@ -171,7 +171,7 @@ def main():
 
         # Customize the layout of the plot
         fig.update_layout(
-            title="NYC Pedestrian Collisions and Accidents Over Time",
+            title="NYC Motor Vehicle Collisions Over Time",
             xaxis_title="Date",
             yaxis_title="Count",
             yaxis=dict(
